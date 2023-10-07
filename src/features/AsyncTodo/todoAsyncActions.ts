@@ -13,6 +13,7 @@ export const fetchcAllTodos = createAsyncThunk<
       "http://jsonplaceholder.typicode.com/todos?_limit=10"
     );
     return await response.json();
+    //return (await response.json()) as Todo[];
   },
   {
     condition: (_, { getState }) => {
@@ -44,18 +45,46 @@ export const createTodo = createAsyncThunk<Todo, string>(
   }
 );
 
-export const removeTodo = createAsyncThunk(
-  "todo/removeTodo",
-  async (id: Todo["id"], { rejectWithValue }) => {
+export const removeTodo = createAsyncThunk<
+  Todo["id"],
+  Todo["id"],
+  { rejectValue: string }
+>("todo/removeTodo", async (id: Todo["id"], { rejectWithValue }) => {
+  const response = await fetch(
+    "https://jsonplaceholder.typicode.com/todos/" + id,
+    {
+      method: "DELETE",
+    }
+  );
+  if (!response.ok) {
+    return rejectWithValue("impossible to delete todo with id " + id);
+  }
+  return id;
+});
+
+export const toggleTodo = createAsyncThunk<
+  Todo,
+  Todo["id"],
+  { state: { asyncTodos: TodoSlice }; rejectValue: string }
+>("todo/toggleTodo", async (id, { getState, rejectWithValue }) => {
+  const todo = getState().asyncTodos.list.find((el) => el.id === id);
+  if (todo) {
     const response = await fetch(
       "https://jsonplaceholder.typicode.com/todos/" + id,
       {
-        method: "DELETE",
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
       }
     );
+
     if (!response.ok) {
-      return rejectWithValue("impossible to delete todo with id " + id);
+      return rejectWithValue("impossible to update todo with id " + id);
     }
-    return id;
+
+    return await response.json();
   }
-);
+
+  return rejectWithValue("No such todo with id " + id);
+});
